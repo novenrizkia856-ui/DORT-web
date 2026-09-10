@@ -346,7 +346,7 @@ export default function Page() {
                   ],
                   [
                     "No upgrade path",
-                    "The deployed code is final. What gets audited is exactly what runs.",
+                    "The deployed code is final. What you read on chain is exactly what runs.",
                   ],
                   [
                     "No custody of funds",
@@ -418,10 +418,6 @@ export default function Page() {
                     <dt>Gas token</dt>
                     <dd>{NETWORK.nativeGasToken}</dd>
                   </div>
-                  <div className="row">
-                    <dt>Independent audit</dt>
-                    <dd className="pending">None yet</dd>
-                  </div>
                 </dl>
                 <p className="saside-note">
                   Both contracts are live and immutable. The registry holds nothing except the
@@ -459,7 +455,6 @@ export default function Page() {
               >
                 Read the contract on chain
               </a>
-              <span className="cnote">Reviewed internally. No independent audit yet.</span>
             </div>
           </Reveal>
         </div>

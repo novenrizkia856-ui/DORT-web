@@ -19,10 +19,6 @@ const ITEMS = [
     q: "Does the protocol hold my funds?",
     a: "No. The registry records when an approval should end and executes that. It never takes custody of your tokens at any point.",
   },
-  {
-    q: "Has the contract been audited?",
-    a: "Not by an independent firm, not yet. It went through an internal review with full test coverage, randomised invariant testing and a live security drill. The code is immutable, so what is on chain is exactly what was reviewed. Judge it on that basis.",
-  },
 ];
 
 export default function Faq() {

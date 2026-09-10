@@ -270,7 +270,7 @@ export function TrustSurface() {
         </g>
 
         <text x="60" y="204" fontFamily={MONO} fontSize="10.5" fill={FAINT}>
-          what is audited is what runs, for as long as it runs
+          what is deployed is what runs, for as long as it runs
         </text>
       </svg>
     </div>
