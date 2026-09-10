@@ -496,3 +496,12 @@
     border-radius: 18px;
   }
 }
+
+.connectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 24px;
+}
+.connectors .btn { margin-top: 0; }

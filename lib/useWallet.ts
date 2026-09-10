@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createWalletClient, custom, type Address, type WalletClient } from "viem";
 import { robinhoodChain } from "./chain";
 import { NETWORK } from "@/config/contracts";
 
+/** The minimum EIP 1193 surface. Both connectors satisfy it, so the rest of the app never cares
+ *  which one is in use. */
 type Eip1193 = {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>;
   on?: (event: string, handler: (...args: never[]) => void) => void;
   removeListener?: (event: string, handler: (...args: never[]) => void) => void;
+  disconnect?: () => Promise<void>;
 };
 
 declare global {
@@ -17,119 +20,178 @@ declare global {
   }
 }
 
+export type ConnectorKind = "injected" | "walletconnect";
+
+const PROJECT_ID = (process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "").trim();
+
+/**
+ * WalletConnect only appears when a project id is configured. Without one its own servers reject
+ * the session, so offering the button would produce a dead end. Get an id at
+ * https://dashboard.reown.com and set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID.
+ */
+export const walletConnectAvailable = PROJECT_ID.length > 0;
+
+const LAST_CONNECTOR = "dort:connector";
+
 export type WalletState = {
   ready: boolean;
-  hasWallet: boolean;
+  hasInjected: boolean;
   address: Address | null;
   chainId: number | null;
   wrongChain: boolean;
-  connecting: boolean;
+  connecting: ConnectorKind | null;
+  connector: ConnectorKind | null;
   error: string | null;
 };
 
-/**
- * Injected wallet only: MetaMask, Rabby, Coinbase Wallet and anything else that puts an EIP 1193
- * provider on `window.ethereum`.
- *
- * There is no WalletConnect, so mobile wallets that rely on it will not appear. That is a
- * deliberate trade for a static site with no project id and no backend, and it is stated in the
- * UI rather than left for the user to discover.
- */
 export function useWallet() {
+  const provider = useRef<Eip1193 | null>(null);
   const [state, setState] = useState<WalletState>({
     ready: false,
-    hasWallet: false,
+    hasInjected: false,
     address: null,
     chainId: null,
     wrongChain: false,
-    connecting: false,
+    connecting: null,
+    connector: null,
     error: null,
   });
 
-  const readChain = useCallback(async (eth: Eip1193) => {
-    const hex = (await eth.request({ method: "eth_chainId" })) as string;
-    return Number.parseInt(hex, 16);
-  }, []);
+  /* ------------------------------ shared wiring ----------------------------- */
 
-  /* Pick up an already authorised account on load, without prompting. */
-  useEffect(() => {
-    const eth = typeof window !== "undefined" ? window.ethereum : undefined;
-    if (!eth) {
-      setState((s) => ({ ...s, ready: true, hasWallet: false }));
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const accounts = (await eth.request({ method: "eth_accounts" })) as string[];
-        const chainId = await readChain(eth);
-        if (cancelled) return;
-        setState({
-          ready: true,
-          hasWallet: true,
-          address: (accounts[0] as Address) ?? null,
-          chainId,
-          wrongChain: accounts[0] ? chainId !== NETWORK.chainIdMainnet : false,
-          connecting: false,
-          error: null,
-        });
-      } catch {
-        if (!cancelled) setState((s) => ({ ...s, ready: true, hasWallet: true }));
-      }
-    })();
+  const bind = useCallback((p: Eip1193, kind: ConnectorKind) => {
+    provider.current = p;
 
     const onAccounts = (...args: never[]) => {
       const accounts = args[0] as unknown as string[];
-      setState((s) => ({ ...s, address: (accounts?.[0] as Address) ?? null }));
+      const next = (accounts?.[0] as Address) ?? null;
+      setState((s) => ({ ...s, address: next, connector: next ? kind : null }));
+      if (!next) window.localStorage.removeItem(LAST_CONNECTOR);
     };
     const onChain = (...args: never[]) => {
-      const hex = args[0] as unknown as string;
-      const id = Number.parseInt(hex, 16);
-      setState((s) => ({ ...s, chainId: id, wrongChain: !!s.address && id !== NETWORK.chainIdMainnet }));
+      const raw = args[0] as unknown as string | number;
+      const id = typeof raw === "string" ? Number.parseInt(raw, 16) : Number(raw);
+      setState((s) => ({
+        ...s,
+        chainId: id,
+        wrongChain: !!s.address && id !== NETWORK.chainIdMainnet,
+      }));
+    };
+    const onDisconnect = () => {
+      provider.current = null;
+      window.localStorage.removeItem(LAST_CONNECTOR);
+      setState((s) => ({ ...s, address: null, connector: null, wrongChain: false }));
     };
 
-    eth.on?.("accountsChanged", onAccounts);
-    eth.on?.("chainChanged", onChain);
-    return () => {
-      cancelled = true;
-      eth.removeListener?.("accountsChanged", onAccounts);
-      eth.removeListener?.("chainChanged", onChain);
-    };
-  }, [readChain]);
+    p.on?.("accountsChanged", onAccounts);
+    p.on?.("chainChanged", onChain);
+    p.on?.("disconnect", onDisconnect);
+  }, []);
 
-  const connect = useCallback(async () => {
-    const eth = window.ethereum;
-    if (!eth) return;
-    setState((s) => ({ ...s, connecting: true, error: null }));
-    try {
-      const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
-      const chainId = await readChain(eth);
+  const adopt = useCallback(
+    async (p: Eip1193, kind: ConnectorKind, accounts: string[]) => {
+      const raw = (await p.request({ method: "eth_chainId" })) as string | number;
+      const chainId = typeof raw === "string" ? Number.parseInt(raw, 16) : Number(raw);
+      bind(p, kind);
+      window.localStorage.setItem(LAST_CONNECTOR, kind);
       setState((s) => ({
         ...s,
         address: (accounts[0] as Address) ?? null,
         chainId,
-        wrongChain: chainId !== NETWORK.chainIdMainnet,
-        connecting: false,
+        wrongChain: !!accounts[0] && chainId !== NETWORK.chainIdMainnet,
+        connecting: null,
+        connector: kind,
+        error: null,
       }));
-    } catch (e) {
-      setState((s) => ({ ...s, connecting: false, error: friendlyError(e) }));
-    }
-  }, [readChain]);
+    },
+    [bind]
+  );
 
-  /** Asks the wallet to switch, and to add the chain first if it does not know it. */
+  /* -------------------------- restore a live session ------------------------- */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const injected = typeof window !== "undefined" ? window.ethereum : undefined;
+      const last = typeof window !== "undefined" ? window.localStorage.getItem(LAST_CONNECTOR) : null;
+
+      setState((s) => ({ ...s, hasInjected: !!injected }));
+
+      try {
+        if (last === "walletconnect" && walletConnectAvailable) {
+          const p = await initWalletConnect();
+          const accounts = (p.accounts ?? []) as string[];
+          if (!cancelled && accounts.length > 0) {
+            await adopt(p as unknown as Eip1193, "walletconnect", accounts);
+          }
+        } else if (injected) {
+          // eth_accounts never prompts, so a page load stays silent.
+          const accounts = (await injected.request({ method: "eth_accounts" })) as string[];
+          if (!cancelled && accounts.length > 0) {
+            await adopt(injected, "injected", accounts);
+          }
+        }
+      } catch {
+        /* A failed restore just means nobody is connected yet. */
+      } finally {
+        if (!cancelled) setState((s) => ({ ...s, ready: true }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adopt]);
+
+  /* --------------------------------- connect -------------------------------- */
+
+  const connect = useCallback(
+    async (kind: ConnectorKind) => {
+      setState((s) => ({ ...s, connecting: kind, error: null }));
+      try {
+        if (kind === "injected") {
+          const injected = window.ethereum;
+          if (!injected) throw new Error("No injected wallet is available.");
+          const accounts = (await injected.request({ method: "eth_requestAccounts" })) as string[];
+          await adopt(injected, "injected", accounts);
+        } else {
+          const p = await initWalletConnect();
+          await p.connect();
+          await adopt(p as unknown as Eip1193, "walletconnect", (p.accounts ?? []) as string[]);
+        }
+      } catch (e) {
+        setState((s) => ({ ...s, connecting: null, error: friendlyError(e) }));
+      }
+    },
+    [adopt]
+  );
+
+  const disconnect = useCallback(async () => {
+    try {
+      await provider.current?.disconnect?.();
+    } catch {
+      /* Injected wallets have no disconnect. Dropping our own reference is enough. */
+    }
+    provider.current = null;
+    window.localStorage.removeItem(LAST_CONNECTOR);
+    setState((s) => ({ ...s, address: null, connector: null, wrongChain: false, error: null }));
+  }, []);
+
+  /* ------------------------------- chain switch ------------------------------ */
+
   const switchChain = useCallback(async () => {
-    const eth = window.ethereum;
-    if (!eth) return;
+    const p = provider.current;
+    if (!p) return;
     const hexId = `0x${NETWORK.chainIdMainnet.toString(16)}`;
     try {
-      await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hexId }] });
+      await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hexId }] });
     } catch (e) {
       const code = (e as { code?: number })?.code;
+      // 4902 means the wallet does not know this chain yet. Offer to add it.
       if (code === 4902 || code === -32603) {
         try {
-          await eth.request({
+          await p.request({
             method: "wallet_addEthereumChain",
             params: [
               {
@@ -151,16 +213,60 @@ export function useWallet() {
   }, []);
 
   const getWalletClient = useCallback((): WalletClient | null => {
-    const eth = window.ethereum;
-    if (!eth || !state.address) return null;
+    const p = provider.current;
+    if (!p || !state.address) return null;
     return createWalletClient({
       account: state.address,
       chain: robinhoodChain,
-      transport: custom(eth as never),
+      transport: custom(p as never),
     });
   }, [state.address]);
 
-  return { ...state, connect, switchChain, getWalletClient };
+  return { ...state, walletConnectAvailable, connect, disconnect, switchChain, getWalletClient };
+}
+
+/* -------------------------------------------------------------------------- */
+
+type WcProvider = {
+  accounts?: string[];
+  connect: () => Promise<void>;
+  request: Eip1193["request"];
+  on?: Eip1193["on"];
+  removeListener?: Eip1193["removeListener"];
+  disconnect?: () => Promise<void>;
+};
+
+let wcInstance: WcProvider | null = null;
+
+/**
+ * Loaded on demand, never at page load.
+ *
+ * The WalletConnect provider pulls in a few hundred kilobytes and most visitors will use an
+ * injected wallet, so a dynamic import keeps it out of the initial bundle entirely. It is cached
+ * after the first call so a reconnect does not re-initialise the session.
+ */
+async function initWalletConnect(): Promise<WcProvider> {
+  if (wcInstance) return wcInstance;
+
+  const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+
+  wcInstance = (await EthereumProvider.init({
+    projectId: PROJECT_ID,
+    chains: [NETWORK.chainIdMainnet],
+    optionalChains: [NETWORK.chainIdMainnet],
+    rpcMap: { [NETWORK.chainIdMainnet]: NETWORK.rpcMainnet },
+    showQrModal: true,
+    metadata: {
+      name: "DORT",
+      description: "Give every token approval an end date you choose.",
+      url: typeof window !== "undefined" ? window.location.origin : "https://dort.app",
+      icons: [
+        typeof window !== "undefined" ? `${window.location.origin}/favicon.svg` : "",
+      ].filter(Boolean),
+    },
+  })) as unknown as WcProvider;
+
+  return wcInstance;
 }
 
 /** Turns a wallet or RPC rejection into one short sentence a person can act on. */
@@ -169,10 +275,12 @@ export function friendlyError(e: unknown): string {
   if (code === 4001) return "You rejected the request in your wallet.";
   if (code === -32002) return "Your wallet already has a pending request. Open it and finish that first.";
 
-  const raw = (e as { shortMessage?: string; message?: string })?.shortMessage
-    ?? (e as { message?: string })?.message
-    ?? String(e);
+  const raw =
+    (e as { shortMessage?: string })?.shortMessage ??
+    (e as { message?: string })?.message ??
+    String(e);
 
+  if (/user rejected|user closed|modal closed/i.test(raw)) return "You closed the request before approving it.";
   if (/insufficient funds/i.test(raw)) return "Not enough ETH to cover the bounty plus gas.";
   if (/ExpiryNotInFuture/.test(raw)) return "That expiry time has already passed. Pick a later one.";
   if (/PermitDeadlineBeforeExpiry/.test(raw)) return "The permit deadline is earlier than the expiry.";
@@ -183,6 +291,5 @@ export function friendlyError(e: unknown): string {
   if (/AllowanceNotCleared/.test(raw)) return "The token did not clear the allowance, so nothing was paid out.";
   if (/BountyTransferFailed/.test(raw)) return "The bounty transfer failed, so the whole call was reverted.";
 
-  // Trim viem's long multi line dumps down to the first meaningful line.
   return raw.split("\n")[0].slice(0, 160);
 }

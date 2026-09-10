@@ -50,16 +50,15 @@ export default function Dapp() {
     return <div className="gate"><p className="empty">Loading...</p></div>;
   }
 
-  if (!wallet.hasWallet) {
+  const noRouteIn = !wallet.hasInjected && !wallet.walletConnectAvailable;
+
+  if (noRouteIn) {
     return (
       <div className="gate">
         <h2>No wallet found</h2>
         <p>
           DORT needs a browser wallet such as MetaMask or Rabby. Install one, then reload this
           page.
-        </p>
-        <p className="note dim">
-          Mobile wallets that connect over WalletConnect are not supported yet.
         </p>
       </div>
     );
@@ -73,9 +72,33 @@ export default function Dapp() {
           Everything here reads from the chain. Nothing is stored on a server, because there is no
           server.
         </p>
-        <button className="btn btn-accent btn-lg" onClick={wallet.connect} disabled={wallet.connecting}>
-          {wallet.connecting ? "Check your wallet..." : "Connect wallet"}
-        </button>
+
+        <div className="connectors">
+          {wallet.hasInjected && (
+            <button
+              className="btn btn-accent btn-lg"
+              onClick={() => wallet.connect("injected")}
+              disabled={wallet.connecting !== null}
+            >
+              {wallet.connecting === "injected" ? "Check your wallet..." : "Browser wallet"}
+            </button>
+          )}
+          {wallet.walletConnectAvailable && (
+            <button
+              className="btn btn-line btn-lg"
+              onClick={() => wallet.connect("walletconnect")}
+              disabled={wallet.connecting !== null}
+            >
+              {wallet.connecting === "walletconnect" ? "Opening..." : "WalletConnect"}
+            </button>
+          )}
+        </div>
+
+        {!wallet.hasInjected && (
+          <p className="note dim">
+            No browser wallet was detected, so scan the code with a mobile wallet instead.
+          </p>
+        )}
         {wallet.error && <p className="note bad">{wallet.error}</p>}
       </div>
     );
@@ -103,9 +126,15 @@ export default function Dapp() {
       <div className="acct">
         <span className="acct-dot" />
         <span className="mono">{address.slice(0, 6)}…{address.slice(-4)}</span>
-        <span className="acct-net">{NETWORK.name}</span>
+        <span className="acct-net">
+          {NETWORK.name}
+          {wallet.connector === "walletconnect" && " via WalletConnect"}
+        </span>
         <button className="acct-refresh" onClick={refresh} disabled={loading}>
           {loading ? "Reading..." : "Refresh"}
+        </button>
+        <button className="acct-refresh" onClick={wallet.disconnect}>
+          Disconnect
         </button>
       </div>
 
