@@ -6,7 +6,7 @@ const LINKS = [
   { href: "#how", label: "How It Works" },
   { href: "#different", label: "Why DORT" },
   { href: "#security", label: "Security" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/docs", label: "Docs" },
 ];
 
 export default function Nav() {

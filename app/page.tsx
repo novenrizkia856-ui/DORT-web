@@ -478,8 +478,8 @@ export default function Page() {
 
           <Reveal delay={140}>
             <div className="ctarow">
-              <a className="btn btn-line btn-lg" href="#docs">
-                Still have a question? Read The Docs
+              <a className="btn btn-line btn-lg" href="/docs">
+                Still have a question? Read the docs
               </a>
             </div>
           </Reveal>
@@ -531,7 +531,7 @@ export default function Page() {
             </div>
             <div>
               <h5>Elsewhere</h5>
-              <a href="#docs">Documentation</a>
+              <a href="/docs">Documentation</a>
               <a href="#github">GitHub</a>
               <a href="#social">Follow along</a>
             </div>
