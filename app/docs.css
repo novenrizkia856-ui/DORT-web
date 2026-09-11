@@ -33,11 +33,13 @@
   height: 60px;
 }
 .docs-brand {
-  font-family: var(--serif);
-  font-size: 21px;
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  color: var(--e-ink);
+  display: flex;
+  align-items: center;
+}
+.docs-brand img {
+  display: block;
+  height: 21px;
+  width: auto;
 }
 .docs-brand-tag {
   font-family: var(--mono);

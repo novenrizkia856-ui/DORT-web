@@ -24,8 +24,25 @@ export default function Nav() {
     <>
       <header className={`nav${solid ? " solid" : ""}`} id="nav">
         <div className="nav-in">
+          {/* Two lockups, stacked and cross faded. The bar turns into a dark pill once the
+              page scrolls, so the ink wordmark has to give way to the white one. Both are in
+              the DOM from the start, otherwise the swap flashes the first time it happens. */}
           <a className="brand" href="#top" aria-label="DORT home">
-            <span className="wm">DORT</span>
+            <img
+              className="wm wm-ink"
+              src="/brand/lockup-ink.png"
+              alt="DORT"
+              width={480}
+              height={152}
+            />
+            <img
+              className="wm wm-light"
+              src="/brand/lockup-on-dark.png"
+              alt=""
+              aria-hidden="true"
+              width={480}
+              height={152}
+            />
           </a>
 
           <nav className="navlinks" aria-label="Sections">

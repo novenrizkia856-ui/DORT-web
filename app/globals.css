@@ -29,6 +29,12 @@
   --signal: #a06a1e;
   --signal-d: #7f5316;
   --signal-soft: #f7eddc;
+  /* The logo's own colours, sampled from the supplied artwork. The mark carries these;
+     the interface keeps the ink blue and bronze above. Kept here so nothing has to
+     guess at them again. */
+  --brand-green: #29d394;
+  --brand-ink: #070a07;
+
   --info: #2f6be0;
   --info-soft: #e8f0fd;
   --risk: #b53724;
@@ -287,13 +293,25 @@ header.nav.solid .hamburger span { background: #fff; }
   gap: 10px;
   transition: color 0.4s;
   display: flex;
+  position: relative;
 }
+/* The lockup is sized by height so it keeps its ratio, and the two variants sit on top of
+   one another so the light one can fade in when the bar goes dark. */
 .brand .wm {
-  font-family: var(--serif);
-  letter-spacing: -0.03em;
-  font-size: 21px;
-  font-weight: 400;
+  display: block;
+  height: 22px;
+  width: auto;
+  transition: opacity 0.4s;
 }
+.brand .wm-light {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  opacity: 0;
+}
+header.nav.solid .brand .wm-ink { opacity: 0; }
+header.nav.solid .brand .wm-light { opacity: 1; }
 .navlinks { align-items: center; gap: 4px; margin-left: 8px; display: flex; }
 .navlink {
   color: var(--ink-2);
@@ -964,7 +982,7 @@ footer { border-top: 1px solid var(--line); background: #fff; padding: 70px 0 48
 .foot-grid h5 { color: var(--faint); margin-bottom: 16px; font-size: 13px; font-weight: 600; }
 .foot-grid a { color: var(--muted); padding: 6px 0; font-size: 15px; transition: color 0.16s; display: block; }
 .foot-grid a:hover { color: var(--ink); }
-.foot-brand .wm { font-family: var(--serif); letter-spacing: -0.03em; align-items: center; gap: 10px; font-size: 22px; font-weight: 400; display: flex; }
+.foot-brand .wm { display: block; height: 26px; width: auto; }
 .foot-brand p { color: var(--muted); max-width: 36ch; margin-top: 14px; font-size: 15px; line-height: 1.6; }
 .foot-bot { color: var(--faint); flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; padding-top: 28px; font-size: 13px; display: flex; }
 

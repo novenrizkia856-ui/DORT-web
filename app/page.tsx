@@ -513,7 +513,13 @@ export default function Page() {
         <div className="wrap">
           <div className="foot-grid">
             <div className="foot-brand">
-              <div className="wm">DORT</div>
+              <img
+                className="wm"
+                src="/brand/lockup-ink.png"
+                alt="DORT"
+                width={480}
+                height={152}
+              />
               <p>
                 Every token approval gets an end date you choose, on Robinhood Chain.
               </p>

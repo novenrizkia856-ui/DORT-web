@@ -21,11 +21,13 @@
   padding: 26px 24px;
 }
 .dapp-brand {
-  font-family: var(--serif);
-  font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  color: var(--e-ink);
+  display: flex;
+  align-items: center;
+}
+.dapp-brand img {
+  display: block;
+  height: 24px;
+  width: auto;
 }
 .dapp-back {
   color: var(--e-muted);

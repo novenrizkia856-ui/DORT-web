@@ -13,8 +13,8 @@ export default function AppPage() {
   return (
     <main className="dapp">
       <header className="dapp-head">
-        <Link className="dapp-brand" href="/">
-          DORT
+        <Link className="dapp-brand" href="/" aria-label="DORT home">
+          <img src="/brand/lockup-ink.png" alt="DORT" width={480} height={152} />
         </Link>
         <Link className="dapp-back" href="/">
           Back to the site

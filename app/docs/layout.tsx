@@ -17,8 +17,8 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
     <div className="docs">
       <header className="docs-head">
         <div className="docs-head-in">
-          <Link className="docs-brand" href="/">
-            DORT
+          <Link className="docs-brand" href="/" aria-label="DORT home">
+            <img src="/brand/lockup-ink.png" alt="DORT" width={480} height={152} />
           </Link>
           <span className="docs-brand-tag">Docs</span>
           <nav className="docs-head-nav">
