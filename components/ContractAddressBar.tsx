@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { TOKEN, tokenIsPublished } from "@/config/contracts";
+import { TOKEN, tokenExplorerUrl, tokenIsPublished } from "@/config/contracts";
+import { shortenAddress } from "@/lib/format";
 
 /**
  * Contract address bar. Sits above the navigation at the very top of the page.
  *
- * Reads TOKEN.isLive and TOKEN.contractAddress from config/contracts.ts and
- * nothing else. Flipping isLive to true and filling contractAddress in that one
- * file is the only change needed to switch this bar from "Coming soon" to the
- * real address with a working copy button.
+ * Everything here follows one value: the address in config/token.ts. Paste an
+ * address there and this bar stops saying "Coming soon", shows the address,
+ * enables the copy button and links through to the explorer. There is no second
+ * switch to remember on launch day.
  */
 export default function ContractAddressBar() {
   const [copied, setCopied] = useState(false);
@@ -33,9 +34,19 @@ export default function ContractAddressBar() {
         <span className="cabar-lbl">Token contract</span>
 
         {tokenIsPublished ? (
-          <span className="cabar-val" title={TOKEN.contractAddress}>
-            {TOKEN.contractAddress}
-          </span>
+          <a
+            className="cabar-val"
+            href={tokenExplorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`${TOKEN.contractAddress} · open on the explorer`}
+          >
+            {/* The full address fits down to 600px. Below that it would be cut off mid
+                character, so the shortened form takes over. The copy button always copies
+                the whole thing regardless of which one is on screen. */}
+            <span className="ca-full">{TOKEN.contractAddress}</span>
+            <span className="ca-short">{shortenAddress(TOKEN.contractAddress)}</span>
+          </a>
         ) : (
           <span className="cabar-val pending">Coming soon</span>
         )}

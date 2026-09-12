@@ -55,16 +55,33 @@ because they are deployed and immutable and will not change.
 `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, from <https://dashboard.reown.com>. Without it the app
 works, but only with browser wallets. See the app section below.
 
-### The token contract bar
+### Publishing the token address
 
 The slim bar at the top of the marketing page is the only place a token address appears anywhere
-on the site. It reads `TOKEN.isLive` and `TOKEN.contractAddress` and shows "Coming soon" with a
-disabled copy button until **both** of these are true:
+on the site. Until one exists it reads "Coming soon" with the copy button disabled.
 
-- `NEXT_PUBLIC_TOKEN_IS_LIVE` is the exact string `true`
-- `NEXT_PUBLIC_TOKEN_ADDRESS` holds a non empty address
+Launching is one line, in `config/token.ts`:
 
-Set both and redeploy. Nothing else needs editing, and no copy anywhere will contradict the flag.
+```bash
+npm run token 0xabc...123
+git commit -am "Publish the token address" && git push
+```
+
+That is the whole change. The bar switches to the address, the copy button turns on and the
+address links through to the explorer. Liveness is derived from the address rather than kept as a
+separate flag, so there is no second switch to forget under pressure, and `npm run token clear`
+puts it back.
+
+Two things worth knowing:
+
+- A malformed address **fails the build** rather than reaching the site. Better to lose fifteen
+  seconds than to publish something people will paste into a wallet.
+- `NEXT_PUBLIC_TOKEN_ADDRESS` still overrides the file if it is set on Vercel, for the case where
+  the address has to go live without a push.
+
+One piece of copy goes stale the moment a token exists: the "Is there a token?" answer in
+`docs/reference/faq.md`, which currently says none has launched. `npm run token` prints that
+reminder.
 
 ---
 

@@ -8,9 +8,11 @@
  * anything here can still be overridden without a code change.
  *
  * The registry and lens addresses are deployed, immutable and permanent, so they
- * are recorded here rather than left to configuration. The token fields stay empty
- * because no token has launched.
+ * are recorded here rather than left to configuration. The token address lives in
+ * its own file, config/token.ts, so that launch day is a one line change.
  */
+
+import { TOKEN_ADDRESS } from "./token";
 
 const env = (value: string | undefined, fallback = ""): string =>
   value !== undefined && value !== "" ? value : fallback;
@@ -51,16 +53,41 @@ export const CONTRACTS = {
   },
 };
 
+/**
+ * The token.
+ *
+ * Launch day has to be fast, so there is exactly one thing to change: the address in
+ * config/token.ts. Liveness is derived from it rather than kept as a separate flag,
+ * because two switches are two chances to publish a half state under pressure.
+ *
+ * An environment variable still wins if one is set, so the address can also be pushed
+ * from Vercel without a deploy from a machine.
+ */
+const tokenAddress = env(process.env.NEXT_PUBLIC_TOKEN_ADDRESS, TOKEN_ADDRESS).trim();
+
+const ADDRESS_SHAPE = /^0x[0-9a-fA-F]{40}$/;
+
+/* A malformed address must never reach the page. Failing the build is the fastest
+   possible feedback, and the alternative is a live bar showing a broken address that
+   people will copy and paste into a wallet. */
+if (tokenAddress !== "" && !ADDRESS_SHAPE.test(tokenAddress)) {
+  throw new Error(
+    `Token address is not a valid address: ${JSON.stringify(tokenAddress)}. ` +
+      `Expected 0x followed by 40 hex characters. Fix config/token.ts, or leave it empty ` +
+      `to keep the bar reading "Coming soon".`
+  );
+}
+
 export const TOKEN = {
   ticker: "DORT",
-  contractAddress: env(process.env.NEXT_PUBLIC_TOKEN_ADDRESS),
-  isLive: process.env.NEXT_PUBLIC_TOKEN_IS_LIVE === "true",
+  contractAddress: tokenAddress,
+  isLive: tokenAddress !== "",
 };
 
-/**
- * The bar at the top of the page only shows a real address when the token is
- * flagged live AND an address is actually present. This keeps every piece of
- * token copy on the site consistent with one value.
- */
-export const tokenIsPublished: boolean =
-  TOKEN.isLive && TOKEN.contractAddress.trim().length > 0;
+/** True once a real address is in place. Everything token shaped on the site reads this. */
+export const tokenIsPublished: boolean = TOKEN.isLive;
+
+/** The token's page on the explorer. Empty while nothing has launched. */
+export const tokenExplorerUrl: string = tokenIsPublished
+  ? `${NETWORK.explorerMainnet}/token/${TOKEN.contractAddress}`
+  : "";

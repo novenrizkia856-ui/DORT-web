@@ -178,6 +178,18 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; margin: 0; font-weight: 700; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Once the address is real it links through to the explorer, so it needs to read as a link
+   without shouting. The underline only appears on hover. */
+a.cabar-val {
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.16s, border-color 0.16s;
+}
+a.cabar-val:hover {
+  color: var(--e-accent);
+  border-bottom-color: var(--e-accent);
+}
+.ca-short { display: none; }
 .cabar-val.pending {
   color: var(--premium);
   letter-spacing: 0.08em;
@@ -1024,6 +1036,9 @@ footer { border-top: 1px solid var(--line); background: #fff; padding: 70px 0 48
   .tape-vp { padding: 14px 0; }
   .foot-grid { grid-template-columns: 1fr; }
   .cabar-lbl { font-size: 9.5px; letter-spacing: 0.1em; }
+  /* Below this width the full address no longer fits, measured, not guessed. */
+  .ca-full { display: none; }
+  .ca-short { display: inline; }
 }
 
 @media (prefers-reduced-motion: reduce) {

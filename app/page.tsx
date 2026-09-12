@@ -8,8 +8,7 @@ import Faq from "@/components/Faq";
 import MetricStrip from "@/components/MetricStrip";
 import { ExposureBar, ExpiryChart, RememberCompare, TrustSurface } from "@/components/Visuals";
 import { CONTRACTS, NETWORK } from "@/config/contracts";
-
-const shorten = (a: string) => (a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
+import { shortenAddress as shorten } from "@/lib/format";
 
 export default function Page() {
   return (

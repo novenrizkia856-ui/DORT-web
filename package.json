@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "npx serve out",
-    "lint": "next lint"
+    "lint": "next lint",
+    "token": "node scripts/set-token-address.mjs"
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.24.0",
