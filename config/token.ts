@@ -14,4 +14,4 @@
  *
  * ======================================================================== */
 
-export const TOKEN_ADDRESS = "";
+export const TOKEN_ADDRESS = "0x8928d6bd156c5a793e96bfc98dfb3650f7df8226";
